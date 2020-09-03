@@ -16,16 +16,16 @@
 # limitations under the License.
 #
 -->
-[中文](plugin-develop-cn.md)
+[中文](zh-cn/plugin-develop.md)
 
 # table of contents
+
 - [**check dependencies**](#check-dependencies)
 - [**name and config**](#name-and-config)
 - [**schema and check**](#schema-and-check)
 - [**choose phase to run**](#choose-phase-to-run)
 - [**implement the logic**](#implement-the-logic)
 - [**write test case**](#write-test-case)
-
 
 ## check dependencies
 
@@ -56,7 +56,7 @@ Note : if the dependency of some plugin needs to be initialized when Nginx start
 
 ## name and config
 
-determine the name and priority of the plugin, and add to conf/config.yaml. For example, for the key-auth plugin,
+determine the name and priority of the plugin, and add to conf/config-default.yaml. For example, for the key-auth plugin,
  you need to specify the plugin name in the code (the name is the unique identifier of the plugin and cannot be
  duplicate), you can see the code in file "__apisix/plugins/key-auth.lua__" :
 
@@ -74,7 +74,7 @@ determine the name and priority of the plugin, and add to conf/config.yaml. For 
 
 Note : The priority of the new plugin cannot be the same as the priority of any existing plugin. In addition, plugins with a high priority value will be executed first. For example, the priority of basic-auth is 2520 and the priority of ip-restriction is 3000. Therefore, the ip-restriction plugin will be executed first, then the basic-auth plugin.
 
-in the "__conf/config.yaml__" configuration file, the enabled plugins (all specified by plugin name) are listed.
+in the "__conf/config-default.yaml__" configuration file, the enabled plugins (all specified by plugin name) are listed.
 
 ```yaml
 plugins:                          # plugin list
@@ -97,6 +97,12 @@ plugins:                          # plugin list
 ```
 
 Note : the order of the plugins is not related to the order of execution.
+
+If your plugin has a new code directory of its own, you will need to modify the `Makefile` to create directory, such as:
+```
+$(INSTALL) -d $(INST_LUADIR)/apisix/plugins/skywalking
+$(INSTALL) apisix/plugins/skywalking/*.lua $(INST_LUADIR)/apisix/plugins/skywalking/
+```
 
 ## schema and check
 
@@ -148,6 +154,8 @@ function _M.log(conf)
 end
 ```
 
+**Note : we can't invoke `ngx.exit` or `core.respond.exit` in rewrite phase and access phase. if need to exit, just return the status and body, the plugin engine will make the exit happen with the returned status and body. [example](https://github.com/apache/apisix/blob/master/apisix/plugins/limit-count.lua#L132)**
+
 ## implement the logic
 
 Write the logic of the plugin in the corresponding phase.
@@ -183,6 +191,7 @@ done
 ```
 
 A test case consists of three parts :
+
 - __Program code__ : configuration content of Nginx location
 - __Input__ : http request information
 - __Output check__ : status, header, body, error log check

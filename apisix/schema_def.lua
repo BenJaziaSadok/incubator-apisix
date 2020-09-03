@@ -18,7 +18,7 @@ local schema    = require('apisix.core.schema')
 local setmetatable = setmetatable
 local error     = error
 
-local _M = {version = 0.4}
+local _M = {version = 0.5}
 
 
 local plugins_schema = {
@@ -29,8 +29,8 @@ local plugins_schema = {
 local id_schema = {
     anyOf = {
         {
-            type = "string", minLength = 1, maxLength = 32,
-            pattern = [[^[0-9]+$]]
+            type = "string", minLength = 1, maxLength = 64,
+            pattern = [[^[a-zA-Z0-9-_]+$]]
         },
         {type = "integer", minimum = 1}
     }
@@ -49,10 +49,10 @@ local ipv4_def = "[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}"
 local ipv6_def = "([a-fA-F0-9]{0,4}:){0,8}(:[a-fA-F0-9]{0,4}){0,8}"
                  .. "([a-fA-F0-9]{0,4})?"
 local ip_def = {
-    {pattern = "^" .. ipv4_def .. "$"},
-    {pattern = "^" .. ipv4_def .. "/[0-9]{1,2}$"},
-    {pattern = "^" .. ipv6_def .. "$"},
-    {pattern = "^" .. ipv6_def .. "/[0-9]{1,3}$"},
+    {title = "IPv4", type = "string", pattern = "^" .. ipv4_def .. "$"},
+    {title = "IPv4/CIDR", type = "string", pattern = "^" .. ipv4_def .. "/[0-9]{1,2}$"},
+    {title = "IPv6", type = "string", pattern = "^" .. ipv6_def .. "$"},
+    {title = "IPv6/CIDR", type = "string", pattern = "^" .. ipv6_def .. "/[0-9]{1,3}$"},
 }
 _M.ip_def = ip_def
 
@@ -75,9 +75,14 @@ local health_checker = {
                     enum = {"http", "https", "tcp"},
                     default = "http"
                 },
-                timeout = {type = "integer", default = 1},
+                timeout = {type = "number", default = 1},
                 concurrency = {type = "integer", default = 10},
                 host = host_def,
+                port = {
+                    type = "integer",
+                    minimum = 1,
+                    maximum = 65535
+                },
                 http_path = {type = "string", default = "/"},
                 https_verify_certificate = {type = "boolean", default = true},
                 healthy = {
@@ -225,11 +230,9 @@ local health_checker = {
 }
 
 
-local upstream_schema = {
-    type = "object",
-    properties = {
-        nodes = {
-            description = "nodes of upstream",
+local nodes_schema = {
+    anyOf = {
+        {
             type = "object",
             patternProperties = {
                 [".*"] = {
@@ -240,9 +243,42 @@ local upstream_schema = {
             },
             minProperties = 1,
         },
+        {
+            type = "array",
+            minItems = 1,
+            items = {
+                type = "object",
+                properties = {
+                    host = host_def,
+                    port = {
+                        description = "port of node",
+                        type = "integer",
+                        minimum = 1,
+                    },
+                    weight = {
+                        description = "weight of node",
+                        type = "integer",
+                        minimum = 0,
+                    },
+                    metadata = {
+                        description = "metadata of node",
+                        type = "object",
+                    }
+                },
+                required = {"host", "port", "weight"},
+            },
+        }
+    }
+}
+
+
+local upstream_schema = {
+    type = "object",
+    properties = {
+        nodes = nodes_schema,
         retries = {
             type = "integer",
-            minimum = 1,
+            minimum = 0,
         },
         timeout = {
             type = "object",
@@ -253,10 +289,29 @@ local upstream_schema = {
             },
             required = {"connect", "send", "read"},
         },
+        k8s_deployment_info = {
+            type = "object",
+            properties = {
+                namespace = {type = "string", description = "k8s namespace"},
+                deploy_name = {type = "string", description = "k8s deployment name"},
+                service_name = {type = "string", description = "k8s service name"},
+                port = {type = "number", minimum = 0},
+                backend_type = {
+                    type = "string",
+                    default = "pod",
+                    description = "k8s service name",
+                    enum = {"svc", "pod"}
+                },
+            },
+            anyOf = {
+                {required = {"namespace", "deploy_name", "port"}},
+                {required = {"namespace", "service_name", "port"}},
+            },
+        },
         type = {
             description = "algorithms of load balancing",
             type = "string",
-            enum = {"chash", "roundrobin"}
+            enum = {"chash", "roundrobin", "ewma"}
         },
         checks = health_checker,
         hash_on = {
@@ -277,10 +332,23 @@ local upstream_schema = {
             description = "enable websocket for request",
             type        = "boolean"
         },
+        pass_host = {
+            description = "mod of host passing",
+            type = "string",
+            enum = {"pass", "node", "rewrite"},
+            default = "pass"
+        },
+        upstream_host = host_def,
+        name = {type = "string", maxLength = 50},
         desc = {type = "string", maxLength = 256},
+        service_name = {type = "string", maxLength = 50},
         id = id_schema
     },
-    required = {"nodes", "type"},
+    anyOf = {
+        {required = {"type", "nodes"}},
+        {required = {"type", "k8s_deployment_info"}},
+        {required = {"type", "service_name"}},
+    },
     additionalProperties = false,
 }
 
@@ -314,6 +382,7 @@ _M.route = {
             },
             uniqueItems = true,
         },
+        name = {type = "string", maxLength = 50},
         desc = {type = "string", maxLength = 256},
         priority = {type = "integer", default = 0},
 
@@ -360,6 +429,8 @@ _M.route = {
             pattern = [[^function]],
         },
 
+        script = {type = "string", minLength = 10, maxLength = 102400},
+
         plugins = plugins_schema,
         upstream = upstream_schema,
 
@@ -379,6 +450,13 @@ _M.route = {
         {required = {"upstream", "uris"}},
         {required = {"upstream_id", "uris"}},
         {required = {"service_id", "uris"}},
+        {required = {"script", "uri"}},
+        {required = {"script", "uris"}},
+    },
+    ["not"] = {
+        anyOf = {
+            {required = {"script", "plugins"}}
+        }
     },
     additionalProperties = false,
 }
@@ -391,12 +469,15 @@ _M.service = {
         plugins = plugins_schema,
         upstream = upstream_schema,
         upstream_id = id_schema,
+        name = {type = "string", maxLength = 50},
         desc = {type = "string", maxLength = 256},
+        script = {type = "string", minLength = 10, maxLength = 102400},
     },
     anyOf = {
         {required = {"upstream"}},
         {required = {"upstream_id"}},
         {required = {"plugins"}},
+        {required = {"script"}},
     },
     additionalProperties = false,
 }
@@ -405,6 +486,7 @@ _M.service = {
 _M.consumer = {
     type = "object",
     properties = {
+        id = id_schema,
         username = {
             type = "string", minLength = 1, maxLength = 32,
             pattern = [[^[a-zA-Z0-9_]+$]]
@@ -423,6 +505,7 @@ _M.upstream = upstream_schema
 _M.ssl = {
     type = "object",
     properties = {
+        id = id_schema,
         cert = {
             type = "string", minLength = 128, maxLength = 64*1024
         },
@@ -432,11 +515,48 @@ _M.ssl = {
         sni = {
             type = "string",
             pattern = [[^\*?[0-9a-zA-Z-.]+$]],
+        },
+        snis = {
+            type = "array",
+            items = {
+                type = "string",
+                pattern = [[^\*?[0-9a-zA-Z-.]+$]],
+            }
+        },
+        certs = {
+            type = "array",
+            items = {
+                type = "string",
+                minLength = 128,
+                maxLength = 64*1024,
+            }
+        },
+        keys = {
+            type = "array",
+            items = {
+                type = "string",
+                minLength = 128,
+                maxLength = 64*1024,
+            }
+        },
+        exptime = {
+            type = "integer",
+            minimum = 1588262400,  -- 2020/5/1 0:0:0
+        },
+        status = {
+            description = "ssl status, 1 to enable, 0 to disable",
+            type = "integer",
+            enum = {1, 0},
+            default = 1
         }
     },
-    required = {"sni", "key", "cert"},
+    oneOf = {
+        {required = {"sni", "key", "cert"}},
+        {required = {"snis", "key", "cert"}}
+    },
     additionalProperties = false,
 }
+
 
 
 _M.proto = {
@@ -454,6 +574,7 @@ _M.proto = {
 _M.global_rule = {
     type = "object",
     properties = {
+        id = id_schema,
         plugins = plugins_schema
     },
     required = {"plugins"},
@@ -464,6 +585,7 @@ _M.global_rule = {
 _M.stream_route = {
     type = "object",
     properties = {
+        id = id_schema,
         remote_addr = remote_addr_def,
         server_addr = {
             description = "server IP",

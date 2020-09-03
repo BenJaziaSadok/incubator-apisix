@@ -19,12 +19,143 @@
 
 # Table of Contents
 
+
+- [1.5.0](#150)
+- [1.4.1](#141)
+- [1.4.0](#140)
+- [1.3.0](#130)
+- [1.2.0](#120)
 - [1.1.0](#110)
 - [1.0.0](#100)
 - [0.9.0](#090)
 - [0.8.0](#080)
 - [0.7.0](#070)
 - [0.6.0](#060)
+
+
+## 1.5.0
+
+### Core
+- Admin API: support authentication with SSL certificates. [1747](https://github.com/apache/apisix/pull/1747)
+- Admin API: support both standard `PATCH` and sub path `PATCH`. [1930](https://github.com/apache/apisix/pull/1930)
+- HealthCheck: supports custom host port. [1914](https://github.com/apache/apisix/pull/1914)
+- Upstream: supports turning off the default retry mechanism. [1919](https://github.com/apache/apisix/pull/1919)
+- URI: supports delete the '/' at the end of the `URI`. [1766](https://github.com/apache/apisix/pull/1766)
+
+### New Plugin
+- :sunrise: **Request Validator** [1709](https://github.com/apache/apisix/pull/1709)
+
+### Improvements
+- change: nginx worker_shutdown_timeout is changed from 3s to recommended value 240s. [1883](https://github.com/apache/apisix/pull/1883)
+- change: the `healthcheck` timeout time type changed from `integer ` to `number`. [1892](https://github.com/apache/apisix/pull/1892)
+- change: the `request-validation` plugin input parameter supports `Schema` validation. [1920](https://github.com/apache/apisix/pull/1920)
+- change: add comments for Makefile `install` command. [1912](https://github.com/apache/apisix/pull/1912)
+- change: update comment for config.yaml `etcd.timeout` configuration. [1929](https://github.com/apache/apisix/pull/1929)
+- change: add more prometheus metrics. [1888](https://github.com/apache/apisix/pull/1888)
+- change: add more configuration options for `cors` plugin. [1963](https://github.com/apache/apisix/pull/1963)
+
+### Bugfix
+- fixed: failed to get `host` in health check configuration. [1871](https://github.com/apache/apisix/pull/1871)
+- fixed: should not save the runtime data of plugin into `etcd`. [1910](https://github.com/apache/apisix/pull/1910)
+- fixed: run `apisix start` several times will start multi nginx processes. [1913](https://github.com/apache/apisix/pull/1913)
+- fixed: read the request body from the temporary file if it was cached. [1863](https://github.com/apache/apisix/pull/1863)
+- fixed: batch processor name and error return type. [1927](https://github.com/apache/apisix/pull/1927)
+- fixed: failed to read redis.ttl in `limit-count` plugin. [1928](https://github.com/apache/apisix/pull/1928)
+- fixed: passive health check seems never provide a healthy report. [1918](https://github.com/apache/apisix/pull/1918)
+- fixed: avoid to modify the original plugin conf. [1958](https://github.com/apache/apisix/pull/1958)
+- fixed: the test case of `invalid-upstream` is unstable and sometimes fails to run. [1925](https://github.com/apache/apisix/pull/1925)
+
+### Doc
+- doc: added APISIX Lua Coding Style Guide. [1874](https://github.com/apache/apisix/pull/1874)
+- doc: fixed link syntax in README.md. [1894](https://github.com/apache/apisix/pull/1894)
+- doc: fixed image links in zh-cn benchmark. [1896](https://github.com/apache/apisix/pull/1896)
+- doc: fixed typos in `FAQ`、`admin-api`、`architecture-design`、`discovery`、`prometheus`、`proxy-rewrite`、`redirect`、`http-logger` documents. [1916](https://github.com/apache/apisix/pull/1916)
+- doc: added improvements for OSx unit tests and request validation plugin. [1926](https://github.com/apache/apisix/pull/1926)
+- doc: fixed typos in `architecture-design` document. [1938](https://github.com/apache/apisix/pull/1938)
+- doc: added the default import path of `Nginx` for unit testing in `Linux` and `macOS` systems in the `how-to-build` document. [1936](https://github.com/apache/apisix/pull/1936)
+- doc: add `request-validation` plugin chinese document. [1932](https://github.com/apache/apisix/pull/1932)
+- doc: fixed file path of `gRPC transcoding` in `README`. [1945](https://github.com/apache/apisix/pull/1945)
+- doc: fixed `uri-blocker` plugin path error in `README`. [1950](https://github.com/apache/apisix/pull/1950)
+- doc: fixed `grpc-transcode` plugin path error in `README`. [1946](https://github.com/apache/apisix/pull/1946)
+- doc: removed unnecessary configurations for `k8s` document. [1891](https://github.com/apache/apisix/pull/1891)
+
+
+## 1.4.1
+
+### Bugfix
+- Fix: multiple SSL certificates are configured, but only one certificate working fine. [1818](https://github.com/apache/incubator-apisix/pull/1818)
+
+
+## 1.4.0
+
+### Core
+- Admin API: Support unique names for routes [1655](https://github.com/apache/incubator-apisix/pull/1655)
+- Optimization of log buffer size and flush time [1570](https://github.com/apache/incubator-apisix/pull/1570)
+
+### New plugins
+- :sunrise: **Apache Skywalking plugin** [1241](https://github.com/apache/incubator-apisix/pull/1241)
+- :sunrise: **Keycloak Identity Server Plugin** [1701](https://github.com/apache/incubator-apisix/pull/1701)
+- :sunrise: **Echo Plugin** [1632](https://github.com/apache/incubator-apisix/pull/1632)
+- :sunrise: **Consume Restriction Plugin** [1437](https://github.com/apache/incubator-apisix/pull/1437)
+
+### Improvements
+- Batch Request : Copy all headers to every request [1697](https://github.com/apache/incubator-apisix/pull/1697)
+- SSL private key encryption [1678](https://github.com/apache/incubator-apisix/pull/1678)
+- Improvement of docs for multiple plugins
+
+
+## 1.3.0
+
+The 1.3 version is mainly for security update.
+
+### Security
+- reject invalid header[#1462](https://github.com/apache/incubator-apisix/pull/1462) and uri safe encode[#1461](https://github.com/apache/incubator-apisix/pull/1461)
+- only allow 127.0.0.1 access admin API and dashboard by default. [#1458](https://github.com/apache/incubator-apisix/pull/1458)
+
+### Plugin
+- :sunrise: **add batch request plugin**. [#1388](https://github.com/apache/incubator-apisix/pull/1388)
+- implemented plugin `sys logger`. [#1414](https://github.com/apache/incubator-apisix/pull/1414)
+
+
+## 1.2.0
+
+The 1.2 version brings many new features, including core and plugins.
+
+### Core
+- :sunrise: **support etcd cluster**. [#1283](https://github.com/apache/incubator-apisix/pull/1283)
+- using the local DNS resolver by default, which is friendly for k8s. [#1387](https://github.com/apache/incubator-apisix/pull/1387)
+- support to run `header_filter`, `body_filter` and `log` phases for global rules. [#1364](https://github.com/apache/incubator-apisix/pull/1364)
+- changed the `lua/apisix` dir to `apisix`(**not backward compatible**). [#1351](https://github.com/apache/incubator-apisix/pull/1351)
+- add dashboard as submodule. [#1360](https://github.com/apache/incubator-apisix/pull/1360)
+- allow adding custom shared dict. [#1367](https://github.com/apache/incubator-apisix/pull/1367)
+
+### Plugin
+- :sunrise: **add Apache Kafka plugin**. [#1312](https://github.com/apache/incubator-apisix/pull/1312)
+- :sunrise: **add CORS plugin**. [#1327](https://github.com/apache/incubator-apisix/pull/1327)
+- :sunrise: **add TCP logger plugin**. [#1221](https://github.com/apache/incubator-apisix/pull/1221)
+- :sunrise: **add UDP logger plugin**. [1070](https://github.com/apache/incubator-apisix/pull/1070)
+- :sunrise: **add proxy mirror plugin**. [#1288](https://github.com/apache/incubator-apisix/pull/1288)
+- :sunrise: **add proxy cache plugin**. [#1153](https://github.com/apache/incubator-apisix/pull/1153)
+- drop websocket enable control in proxy-rewrite plugin(**not backward compatible**). [1332](https://github.com/apache/incubator-apisix/pull/1332)
+- Adding support to public key based introspection for OAuth plugin. [#1266](https://github.com/apache/incubator-apisix/pull/1266)
+- response-rewrite plugin support binary data to client by base64. [#1381](https://github.com/apache/incubator-apisix/pull/1381)
+- plugin `grpc-transcode` supports grpc deadline. [#1149](https://github.com/apache/incubator-apisix/pull/1149)
+- support password auth for limit-count-redis. [#1150](https://github.com/apache/incubator-apisix/pull/1150)
+- Zipkin plugin add service name and report local server IP. [#1386](https://github.com/apache/incubator-apisix/pull/1386)
+- add `change_pwd` and `user_info` for Wolf-Rbac plugin. [#1204](https://github.com/apache/incubator-apisix/pull/1204)
+
+### Admin API
+- :sunrise: support key-based authentication for Admin API(**not backward compatible**). [#1169](https://github.com/apache/incubator-apisix/pull/1169)
+- hide SSL private key in admin API. [#1240](https://github.com/apache/incubator-apisix/pull/1240)
+
+### Bugfix
+- missing `clear` table before to reuse table (**will cause memory leak**). [#1134](https://github.com/apache/incubator-apisix/pull/1134)
+- print warning error message if the yaml route file is invalid. [#1141](https://github.com/apache/incubator-apisix/pull/1141)
+- the balancer IP may be nil, use an empty string instead. [#1166](https://github.com/apache/incubator-apisix/pull/1166)
+- plugin node-status and heartbeat don't have schema. [#1249](https://github.com/apache/incubator-apisix/pull/1249)
+- the plugin basic-auth needs required field. [#1251](https://github.com/apache/incubator-apisix/pull/1251)
+- check the count of upstream valid node. [#1292](https://github.com/apache/incubator-apisix/pull/1292)
+
 
 ## 1.1.0
 

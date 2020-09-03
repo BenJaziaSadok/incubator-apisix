@@ -34,26 +34,51 @@ local schema = {
             enum = {"remote_addr", "server_addr", "http_x_real_ip",
                     "http_x_forwarded_for"},
         },
-        rejected_code = {type = "integer", minimum = 200, maximum = 600},
+        rejected_code = {
+            type = "integer", minimum = 200, maximum = 600,
+            default = 503
+        },
         policy = {
             type = "string",
             enum = {"local", "redis"},
-        },
-        redis_host = {
-            type = "string", minLength = 2
-        },
-        redis_port = {
-            type = "integer", minimum = 1
-        },
-        redis_password = {
-            type = "string", minLength = 0
-        },
-        redis_timeout = {
-            type = "integer", minimum = 1
-        },
+            default = "local",
+        }
     },
-    additionalProperties = false,
-    required = {"count", "time_window", "key", "rejected_code"},
+    required = {"count", "time_window", "key"},
+    dependencies = {
+        policy = {
+            oneOf = {
+                {
+                    properties = {
+                        policy = {
+                            enum = {"local"},
+                        },
+                    },
+                },
+                {
+                    properties = {
+                        policy = {
+                            enum = {"redis"},
+                        },
+                        redis_host = {
+                            type = "string", minLength = 2
+                        },
+                        redis_port = {
+                            type = "integer", minimum = 1, default = 6379,
+                        },
+                        redis_password = {
+                            type = "string", minLength = 0,
+                        },
+                        redis_timeout = {
+                            type = "integer", minimum = 1,
+                            default = 1000,
+                        },
+                    },
+                    required = {"redis_host"},
+                }
+            }
+        }
+    }
 }
 
 
@@ -71,17 +96,10 @@ function _M.check_schema(conf)
         return false, err
     end
 
-    if not conf.policy then
-        conf.policy = "local"
-    end
-
     if conf.policy == "redis" then
         if not conf.redis_host then
             return false, "missing valid redis option host"
         end
-
-        conf.redis_port = conf.redis_port or 6379
-        conf.redis_timeout = conf.redis_timeout or 1000
     end
 
     return true
@@ -125,7 +143,7 @@ function _M.access(conf, ctx)
         end
 
         core.log.error("failed to limit req: ", err)
-        return 500, {error_msg = "failed to limit count: ", err}
+        return 500, {error_msg = "failed to limit count: " .. err}
     end
 
     core.response.set_header("X-RateLimit-Limit", conf.count,
